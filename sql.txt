@@ -1,23 +1,130 @@
-DROP DATABASE IF EXISTS `JAM`;
-CREATE DATABASE `JAM`;
-USE `JAM`;
+# a6 DB 삭제/생성/선택
+DROP DATABASE IF EXISTS `a6`;
+CREATE DATABASE `a6`;
+USE `a6`;
 
-CREATE TABLE article(
-    id INT(10) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    regDate DATETIME NOT NULL,
-    updateDate DATETIME NOT NULL,
-    title CHAR(100) NOT NULL,
-    `body` TEXT NOT NULL
+# 부서(홍보, 기획)
+CREATE TABLE dept(
+id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+regDate DATETIME NOT NULL,
+deptName CHAR(50) NOT NULL UNIQUE
 );
 
-SHOW TABLES;
-DESC article;
-
-INSERT INTO article
+INSERT INTO dept
 SET regDate = NOW(),
-updateDate = NOW(),
-title = CONCAT('제목 ',RAND()),
-`body` = CONCAT('내용 ',RAND());
+    deptName = '홍보';
 
-SELECT * 
-FROM article;
+INSERT INTO dept
+SET regDate = NOW(),
+    deptName = '기획';
+    
+SELECT *
+FROM dept;
+
+# 사원(홍길동/홍보/5000만원, 홍길순/홍보/6000만원, 임꺽정/기획/4000만원)
+CREATE TABLE emp(
+id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+regDate DATETIME NOT NULL,
+`name` CHAR(50) NOT NULL,
+deptId INT(11) NOT NULL,
+sel TEXT NOT NULL
+);
+
+INSERT INTO emp
+SET regDate = NOW(),
+    `name` = '홍길동',
+    deptId = 1,
+    sel = 5000;
+    
+INSERT INTO emp
+SET regDate = NOW(),
+    `name` = '홍길순',
+    deptId = 1,
+    sel = 6000;
+    
+INSERT INTO emp
+SET regDate = NOW(),
+    `name` = '임꺽정',
+    deptId = 2,
+    sel = 4000;
+    
+SELECT *
+FROM emp;
+    
+# 사원 수 출력
+SELECT COUNT(*) AS '사원 수'
+FROM emp;
+
+# 가장 큰 사원 번호 출력
+SELECT MAX(id) AS '마지막 사원번호'
+FROM emp;
+
+# 가장 고액 연봉
+SELECT MAX(sel) AS '가장 고액 연봉'
+FROM emp;
+
+# 가장 저액 연봉
+SELECT MIN(sel) AS '가장 저액 연봉'
+FROM emp;
+
+# 회사에서 1년 고정 지출(인건비)
+SELECT SUM(sel) AS '회사 1년 인건비'
+FROM emp;
+
+# 부서별, 1년 고정 지출(인건비)
+SELECT d.deptName AS '부서 명', SUM(e.sel) AS '1년 인건비'
+FROM emp AS e
+INNER JOIN dept AS d
+ON e.deptId = d.id
+GROUP BY d.id
+
+# 부서별, 최고연봉
+SELECT d.deptName AS '부서 명', MAX(sel) AS '최고연봉'
+FROM emp AS e
+INNER JOIN dept AS d
+ON e.deptId = d.id
+GROUP BY d.id;
+
+# 부서별, 최저연봉
+SELECT d.deptName AS '부서 명', MIN(sel) AS '최저연봉'
+FROM emp AS e
+INNER JOIN dept AS d
+ON e.deptId = d.id
+GROUP BY d.id;
+
+# 부서별, 평균연봉
+SELECT d.deptName AS '부서 명', AVG(sel) AS '평균연봉'
+FROM emp AS e
+INNER JOIN dept AS d
+ON e.deptId = d.id
+GROUP BY d.id;
+
+# 부서별, 부서명, 사원리스트, 평균연봉, 최고연봉, 최소연봉, 사원수 
+## V1(조인 안한 버전)
+SELECT deptId AS '부서 번호', GROUP_CONCAT(`name`) AS '사원 명', AVG(sel) AS '평균연봉', MAX(sel) AS '최고연봉', MIN(sel) AS '최소연봉', COUNT(*) AS '사원 수'
+FROM emp
+GROUP BY deptId;
+
+## V2(조인해서 부서명까지 나오는 버전)
+SELECT d.deptName AS '부서 명', GROUP_CONCAT(e.name) AS '사원 명', AVG(sel) AS '평균연봉', MAX(sel) AS '최고연봉', MIN(sel) AS '최소연봉', COUNT(*) AS '사원 수'
+FROM emp AS e
+INNER JOIN dept AS d
+ON e.deptId = d.id
+GROUP BY d.deptName
+
+## V3(V2에서 평균연봉이 5000이상인 부서로 추리기)
+SELECT d.deptName AS '부서 명', GROUP_CONCAT(e.name) AS '사원 명', AVG(sel) AS '평균연봉', MAX(sel) AS '최고연봉', MIN(sel) AS '최소연봉', COUNT(*) AS '사원 수'
+FROM emp AS e
+INNER JOIN dept AS d
+ON e.deptId = d.id
+GROUP BY d.deptName
+HAVING 5000 <= AVG(e.sel);
+
+## V4(V3에서 HAVING 없이 서브쿼리로 수행)
+SELECT d.deptName AS '부서 명', GROUP_CONCAT(e.name) AS '사원 명', AVG(sel) AS '평균연봉', MAX(sel) AS '최고연봉', MIN(sel) AS '최소연봉', COUNT(*) AS '사원 수'
+FROM emp AS e
+INNER JOIN dept AS d
+ON e.deptId = d.id
+GROUP BY d.deptName
+
+(SELECT sel FROM emp WHERE deptId 
